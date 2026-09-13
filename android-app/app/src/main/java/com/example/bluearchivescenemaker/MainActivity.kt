@@ -35,7 +35,7 @@ import java.io.OutputStream
 class MainActivity : ComponentActivity() {
 
     companion object {
-        const val VERSION = "v1.0.47"
+        const val VERSION = "v1.0.48"
     }
 
     private lateinit var webView: WebView

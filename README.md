@@ -1,15 +1,18 @@
 # BlueArchive Scene Maker
 
-ブルーアーカイブ（ブルアカ）のゲーム内シナリオ画面（会話シーン、先生の選択肢、エモート吹き出し、UIボタン等）を忠実に再現し、好みの背景画像やスマートフォンのカメラ映像とリアルタイムに重ね合わせて撮影・高解像度保存できるクリエイター向けツールです。
+ブルーアーカイブ（ブルアカ）のゲーム内シナリオ画面（会話シーン、先生の選択肢、エモート吹き出し、UIボタン等）を忠実に再現し、好みの背景画像やスマートフォンのカメラ映像とリアルタイムに重ね合わせて撮影・高解像度保存できるクリエイター向けツールです。アスペクト比４：３を想定して作っています。
 
 <p align="center">
   <a href="./BlueArchive_Scene_Maker.apk">
-    <img src="https://img.shields.io/badge/📲_Android_APKをダウンロード-v1.0.47_Release-1280fe?style=for-the-badge&logo=android&logoColor=white" alt="Download APK">
+    <img src="https://img.shields.io/badge/📲_Android_APKをダウンロード-v1.0.48_Release-1280fe?style=for-the-badge&logo=android&logoColor=white" alt="Download APK">
   </a>
 </p>
 
 <p align="center">
-  <img src="docs/images/screenshot_01_camera.jpg" alt="カメラ重ね合わせ撮影モード" width="90%">
+  <img src="docs/images/main_visual.jpg" alt="BlueArchive Scene Maker 作成例（使用イメージ1：完成シーン）" width="85%">
+</p>
+<p align="center">
+  <sub>▲ 使用イメージ1：アプリで撮影・作成した完成シーン</sub>
 </p>
 
 ---
@@ -21,9 +24,11 @@
 - 横画面構え時にスマートフォンの物理カメラレンズ位置と自然に一致する**左側プレビュー／右側操作パネル**設計。
 
 <p align="center">
-  <img src="docs/images/screenshot_01_camera.jpg" alt="カメラ重ね合わせ撮影モード" width="85%">
+  <img src="docs/images/screenshot_01_camera.jpg" alt="カメラ重ね合わせ撮影・編集画面（使用イメージ2）" width="85%">
 </p>
-
+<p align="center">
+  <sub>▲ 使用イメージ2：上記タイトル完成シーンの作成・編集中の画面（左側リアルタイムプレビュー／右側操作パネル）</sub>
+</p>
 ---
 
 ### 2. セリフ枠 ＆ 生徒名・所属の自動サジェスト入力

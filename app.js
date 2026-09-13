@@ -1,6 +1,6 @@
 /**
  * BlueArchive Scene Maker - app.js
- * Version: v1.0.47
+ * Version: v1.0.48
  */
 
 (function () {
@@ -274,7 +274,7 @@
 
   // --- State ---
   const state = {
-    version: 'v1.0.47',
+    version: 'v1.0.48',
     screen: {
       width: 1440,
       height: 1080
