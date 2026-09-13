@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BlueArchive Scene Maker v1.0.47</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="app_icon.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1280fe">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Hidden Camera Video Element -->
+  <video id="cameraVideo" playsinline autoplay muted style="display:none;"></video>
+
+  <!-- Preset Management Popup Modal -->
+  <div class="modal-overlay" id="presetModal" style="display:none;">
+    <div class="modal-card preset-modal-card">
+      <div class="modal-header">
+        <div class="logo-badge">SCHALE</div>
+        <h2 class="modal-title" style="font-size: 15px;">プリセット管理</h2>
+        <button id="btnClosePresetModal" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="preset-content-body">
+        <!-- 1. 保存済みプリセット一覧 (省スペース化) -->
+        <div class="preset-section-header">保存済みプリセット</div>
+        <div id="inAppPresetList" class="preset-compact-list">
+          <!-- Dynamically populated: [プリセット名] [適用] [削除] -->
+        </div>
+
+        <!-- 2. 現在のシーンを保存 -->
+        <div class="preset-section-header" style="margin-top: 10px;">現在のシーンを保存</div>
+        <div class="preset-save-row">
+          <input type="text" id="inputNewPresetName" class="form-control" placeholder="プリセット名を入力...">
+          <button id="btnSaveCurrentPreset" class="btn btn-primary btn-sm">保存</button>
+        </div>
+
+        <!-- 3. JSON保存・読込 (1行に省スペース化) -->
+        <div class="preset-json-row" style="margin-top: 10px;">
+          <button id="btnExportJson" class="btn btn-secondary btn-sm" title="ファイルへJSON保存">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            JSON出力
+          </button>
+          <label class="btn btn-secondary btn-sm btn-json-import" title="ファイルからJSON読込">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            JSON読込
+            <input type="file" id="inputImportJson" accept=".json,application/json,text/plain" style="display:none;">
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Split Screen Container -->
+  <div class="app-split-container">
+
+    <!-- Left: Preview Viewport (Aligned to left edge near camera lens) -->
+    <main class="preview-viewport" id="previewViewport">
+      <div class="preview-canvas-wrapper" id="canvasWrapper">
+        <canvas id="renderCanvas" width="1440" height="1080"></canvas>
+      </div>
+
+      <!-- Student Suggestion List Overlay (Visible when typing in dialogueName) -->
+      <div class="student-suggestion-overlay" id="studentSuggestionOverlay" style="display:none;">
+        <div class="suggestion-header">
+          <div class="suggestion-title">
+            <span>生徒候補</span>
+            <span class="suggestion-badge" id="suggestionCount">0件</span>
+          </div>
+          <button type="button" class="btn-close-suggestion" id="btnCloseSuggestion" title="候補一覧を閉じる">✕</button>
+        </div>
+        <div class="suggestion-list-grid" id="suggestionListGrid">
+          <!-- Dynamically populated candidate buttons -->
+        </div>
+      </div>
+
+      <!-- Pinch Scale HUD Badge (Visible during pinch-zoom) -->
+      <div class="pinch-hud-badge" id="pinchScaleBadge" style="display:none;">
+        <span class="pinch-hud-icon">🔍</span>
+        <span id="pinchScaleVal">100%</span>
+      </div>
+    </main>
+
+    <!-- Right: Settings & Editing Panel (Occupies right space) -->
+    <aside class="sidebar-panel" id="sidebarDrawer">
+
+      <!-- Top: Tab Navigation (With App Icon on left, tabs row) -->
+      <nav class="tab-nav">
+        <img src="app_icon.png" alt="App Icon" class="tab-app-icon" title="BlueArchive Scene Maker">
+        <div class="tab-btn-wrapper">
+          <button class="tab-btn active" data-tab="tab-screen">背景</button>
+          <button class="tab-btn" data-tab="tab-char">キャラ</button>
+          <button class="tab-btn" data-tab="tab-dialogue">セリフ</button>
+          <button class="tab-btn" data-tab="tab-sensei">先生</button>
+          <button class="tab-btn" data-tab="tab-effect">エフェクト</button>
+          <button class="tab-btn" data-tab="tab-ui">UI</button>
+        </div>
+      </nav>
+
+      <!-- Main Central Area with Side Navigation Buttons on left & right without overlapping content -->
+      <div class="sidebar-main-area">
+        <!-- Side Tab Nav Button (Left: Previous Tab) -->
+        <button class="sidebar-side-nav-btn side-nav-left" id="btnSideTabPrev" title="前のタブへ">‹</button>
+
+        <div class="tab-content-container">
+
+        <!-- Tab: Screen & Background (Active by default) -->
+        <div class="tab-pane active" id="tab-screen">
+
+          <div class="control-card">
+            <div class="card-title">背景画像</div>
+            <div class="upload-dropzone" id="bgDropzone">
+              <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+              <p>クリックして背景画像を選択</p>
+              <span>または画像をここにドラッグ＆ドロップ</span>
+              <input type="file" id="inputBg" accept="image/*" style="display:none;">
+            </div>
+
+            <div class="form-group">
+              <label>背景のぼかし (Blur)</label>
+              <div class="slider-group">
+                <input type="range" id="bgBlur" min="0" max="20" value="0">
+                <span id="bgBlurVal" class="slider-val">0px</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>背景の明るさ (Brightness)</label>
+              <div class="slider-group">
+                <input type="range" id="bgBrightness" min="30" max="150" value="100">
+                <span id="bgBrightnessVal" class="slider-val">100%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Characters (辞書・登場切替) -->
+        <div class="tab-pane" id="tab-char">
+
+          <!-- Upper Section: キャラ登場切替ボタン一覧 -->
+          <div class="control-card">
+            <div class="card-title">
+              <span>キャラ</span>
+              <button id="btnClearChars" class="btn btn-secondary btn-xs" title="配置中の生徒をすべて外します">クリア</button>
+            </div>
+            <div class="char-toggle-grid" id="charToggleGrid">
+              <!-- Dynamically populated: Character buttons with active/inactive states -->
+            </div>
+          </div>
+
+          <!-- Lower Section: キャラクター辞書の作成・管理 -->
+          <div class="control-card" style="margin-top: 6px;">
+            <div class="card-title">
+              <span>キャラクター辞書</span>
+            </div>
+
+            <!-- 新規キャラ登録 -->
+            <div class="dict-add-box">
+              <div style="font-size: 11px; font-weight: 700; color: var(--ba-blue-deep); margin-bottom: 2px;">新規キャラ登録</div>
+              <div class="row" style="margin-bottom: 4px;">
+                <input type="text" id="dictNewCharName" class="form-control" placeholder="キャラ名を入力..." style="flex: 1; height: 26px; font-size: 11px;">
+              </div>
+              <div class="upload-dropzone" id="dictCharDropzone" style="padding: 6px; min-height: 38px; margin-bottom: 4px;">
+                <p style="font-size: 11px; margin: 0;">立ち絵画像を選択 (透過PNG推奨)</p>
+                <input type="file" id="dictInputCharImg" accept="image/*" style="display:none;">
+              </div>
+              <div id="dictPreviewNotice" style="display:none; font-size: 11px; color: #10b981; font-weight: 700; margin-bottom: 4px;">
+                ✓ 画像選択済み
+              </div>
+              <button id="btnAddCharToDict" class="btn btn-primary btn-sm btn-block" style="height: 26px; font-size: 11px;">辞書に追加</button>
+            </div>
+
+            <!-- 登録済み辞書一覧 -->
+            <div style="font-size: 11px; font-weight: 700; color: var(--ba-blue-deep); margin: 6px 0 2px 0;">登録キャラ一覧</div>
+            <div id="dictCharList" class="dict-items-container">
+              <!-- Dynamically populated: [サムネ] [キャラ名] [反転] [暗転] [削除] -->
+            </div>
+
+            <!-- JSON出力・読込 -->
+            <div class="row" style="margin-top: 6px;">
+              <button id="btnExportCharDictJson" class="btn btn-secondary btn-sm" style="flex: 1; height: 26px; font-size: 11px;" title="辞書をJSONファイルへ出力">
+                辞書をJSON出力
+              </button>
+              <label class="btn btn-secondary btn-sm" style="flex: 1; height: 26px; font-size: 11px; margin: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;" title="辞書JSONファイルを読込">
+                辞書をJSON読込
+                <input type="file" id="inputImportCharDictJson" accept=".json,application/json,text/plain" style="display:none;">
+              </label>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Tab 3: Dialogue Window (セリフ) -->
+        <div class="tab-pane" id="tab-dialogue">
+          <div class="control-card">
+            <div class="card-title">
+              <span>セリフ表示</span>
+              <label class="switch">
+                <input type="checkbox" id="dialogueVisible" checked>
+                <span class="slider-round"></span>
+              </label>
+            </div>
+
+            <!-- 名前 ＋ 文字色 (インライン) -->
+            <div class="input-with-color" style="margin-bottom: 4px;">
+              <input type="text" id="dialogueName" class="form-control" value="" placeholder="名前 (生徒名)">
+              <input type="color" id="dialogueNameColor" class="color-picker-mini" value="#ffffff" title="名前文字色">
+            </div>
+
+            <!-- 所属組織 ＋ 文字色 (インライン) -->
+            <div class="input-with-color" style="margin-bottom: 4px;">
+              <input type="text" id="dialogueSub" class="form-control" value="" placeholder="所属組織 (部活・学校)">
+              <input type="color" id="dialogueSubColor" class="color-picker-mini" value="#43b5ff" title="所属文字色">
+            </div>
+
+            <!-- セリフ本文 -->
+            <div class="form-group" style="margin-bottom: 4px;">
+              <textarea id="dialogueText" class="form-control" rows="2" placeholder="セリフ本文"></textarea>
+            </div>
+
+            <!-- ▽ & 暗転 -->
+            <div class="row" style="margin-top: 2px;">
+              <label class="toggle-label">
+                <input type="checkbox" id="dialogueMarker" checked> ▽
+              </label>
+              <label class="toggle-label">
+                <input type="checkbox" id="dialogueGradient" checked> 暗転
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Sensei Choice Window (先生) -->
+        <div class="tab-pane" id="tab-sensei">
+          <div class="control-card">
+            <div class="card-title">
+              <span>先生選択肢表示</span>
+              <label class="switch">
+                <input type="checkbox" id="senseiVisible">
+                <span class="slider-round"></span>
+              </label>
+            </div>
+
+            <!-- 段数切替 (1つ / 2つ) -->
+            <div class="preset-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 8px;">
+              <div class="preset-chip active" id="senseiCount1" data-count="1">1つ</div>
+              <div class="preset-chip" id="senseiCount2" data-count="2">2つ</div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+              <input type="text" id="senseiText1" class="form-control" value="" placeholder="選択肢 1">
+            </div>
+
+            <div class="form-group" id="groupSenseiText2" style="display:none; margin-bottom: 8px;">
+              <input type="text" id="senseiText2" class="form-control" value="" placeholder="選択肢 2">
+            </div>
+
+            <div class="row" style="margin-top: 4px;">
+              <label class="toggle-label">
+                <input type="checkbox" id="senseiQuotes" checked> 「”」をつける
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 5: Emote / Effects (エフェクト) -->
+        <div class="tab-pane" id="tab-effect">
+          <div class="control-card">
+            <div class="card-title">
+              <span>エフェクト表示</span>
+              <label class="switch">
+                <input type="checkbox" id="effectVisible">
+                <span class="slider-round"></span>
+              </label>
+            </div>
+
+            <!-- エフェクトアイコン選択グリッド -->
+            <div class="effect-icon-grid" id="effectGrid">
+              <div class="effect-icon-chip active" data-effect="dots" title="・・・ (考え中)">
+                <img id="effectThumbDots" alt="・・・" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="twirl" title="ぐるぐる (困惑)">
+                <img id="effectThumbTwirl" alt="ぐるぐる" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="exclamation" title="！ (驚き)">
+                <img id="effectThumbExclamation" alt="！" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="sweat" title="汗 (冷や汗)">
+                <img id="effectThumbSweat" alt="汗" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="anger" title="怒り">
+                <img id="effectThumbAnger" alt="怒り" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="question" title="？ (疑問)">
+                <img id="effectThumbQuestion" alt="？" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="shine" title="閃き / 驚き">
+                <img id="effectThumbShine" alt="閃き" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="note" title="音符 (♪)">
+                <img id="effectThumbNote" alt="音符" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="flash" title="フラッシュ (トゲトゲ)">
+                <img id="effectThumbFlash" alt="フラッシュ" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="cross" title="きっ (怒り符)">
+                <img id="effectThumbCross" alt="きっ" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="exclamation_question" title="！？ (驚き疑問)">
+                <img id="effectThumbExclamationQuestion" alt="！？" class="effect-thumb-img">
+              </div>
+              <div class="effect-icon-chip" data-effect="custom" title="自由文字 (吹き出し)">
+                <svg viewBox="0 0 48 48" class="effect-thumb-svg">
+                  <path d="M 8 12 Q 8 6 14 6 L 34 6 Q 40 6 40 12 L 40 28 Q 40 34 34 34 L 22 34 L 14 42 L 16 34 L 14 34 Q 8 34 8 28 Z" fill="#ffffff" stroke="#258bf5" stroke-width="3.5" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- エフェクト操作行 (左右反転など) -->
+            <div class="row" style="margin-top: 8px; align-items: center; justify-content: space-between;">
+              <button type="button" id="btnEffectFlipX" class="btn btn-secondary btn-sm" style="flex: 1; height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                <span>左右反転</span>
+              </button>
+            </div>
+
+            <!-- 自由文字選択時のみ表示される設定群 -->
+            <div id="groupCustomEffectSettings" style="display:none; margin-top: 8px;">
+              <div class="form-group" style="margin-bottom: 8px;">
+                <input type="text" id="effectCustomText" class="form-control" value="zzz" placeholder="カスタム文字">
+              </div>
+              <div class="form-group" style="margin-bottom: 4px;">
+                <select id="effectTail" class="form-control">
+                  <option value="bottom-left">しっぽ: 左下 (曲線)</option>
+                  <option value="bottom-right">しっぽ: 右下 (曲線)</option>
+                  <option value="thought-left">しっぽ: 左下 (思考・丸)</option>
+                  <option value="thought-right">しっぽ: 右下 (思考・丸)</option>
+                  <option value="none">しっぽ無し</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Tab 6: UI Elements -->
+        <div class="tab-pane" id="tab-ui">
+          <div class="control-card">
+            <div class="card-title">
+              <span>右上ボタン (AUTO / MENU)</span>
+              <label class="switch">
+                <input type="checkbox" id="uiButtonsVisible" checked>
+                <span class="slider-round"></span>
+              </label>
+            </div>
+            <div class="row">
+              <label class="toggle-label">
+                <input type="checkbox" id="uiShowAuto" checked> AUTO ボタン
+              </label>
+              <label class="toggle-label">
+                <input type="checkbox" id="uiShowMenu" checked> MENU ボタン
+              </label>
+            </div>
+            <div class="form-group">
+              <label>ボタンのサイズ</label>
+              <div class="slider-group">
+                <input type="range" id="uiScale" min="70" max="150" value="100">
+                <span id="uiScaleVal" class="slider-val">100%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title">バージョン情報</div>
+            <p style="font-size: 12px; color: var(--ba-text); line-height: 1.6;">
+              <strong>BlueArchive Scene Maker</strong><br>
+              バージョン: <code>v1.0.47</code><br>
+              ブルーアーカイブ風の会話・選択肢シーン画像をリアルタイム生成・カメラ撮影できるツールです。
+            </p>
+          </div>
+        </div>
+
+        </div> <!-- /.tab-content-container -->
+
+        <!-- Side Tab Nav Button (Right: Next Tab) -->
+        <button class="sidebar-side-nav-btn side-nav-right" id="btnSideTabNext" title="次のタブへ">›</button>
+      </div> <!-- /.sidebar-main-area -->
+
+      <!-- Editor Floating Undo / Redo HUD (Bottom-Right corner above bottom bar) -->
+      <div class="editor-history-hud" id="editorHistoryHud">
+        <button type="button" class="btn-history-action" id="btnUndo" title="直前の変更に戻る (Undo / Ctrl+Z)" disabled aria-label="元に戻す">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 14 4 9 9 4"></polyline>
+            <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+          </svg>
+        </button>
+        <button type="button" class="btn-history-action" id="btnRedo" title="直前の変更に進む (Redo / Ctrl+Y)" disabled aria-label="やり直す">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 14 20 9 15 4"></polyline>
+            <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Bottom: Action Row (3 equal buttons: Camera Toggle, Save/Capture, Preset popup) -->
+      <div class="panel-bottom-bar">
+        <button id="btnToggleCamera" class="btn btn-secondary btn-slim btn-bottom-col btn-camera-toggle" title="カメラON / カメラOFF">
+          <span id="lblToggleCamera">📷 カメラON</span>
+        </button>
+        <button id="btnMainAction" class="btn btn-success btn-slim btn-bottom-col btn-main-action" title="保存 / 撮影">
+          <span id="lblMainAction">保存</span>
+        </button>
+        <button id="btnOpenPresetModal" class="btn btn-primary btn-slim btn-bottom-col btn-preset-modal-toggle" title="プリセット管理を開く">
+          <span>📁 プリセット</span>
+        </button>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <script src="effects.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
